@@ -1,4 +1,3 @@
-//Seran Base Version
 /*
 
  MSE 2202 MSEBot base code for Labs 3 and 4
@@ -10,7 +9,7 @@
  Rev 2 - Update for MSEduino v. 2
  
  */
-
+// Matt changes 
 #include <Servo.h>
 #include <EEPROM.h>
 #include <uSTimer2.h>
@@ -41,6 +40,7 @@ boolean followLineInit = false;
 unsigned int leftSpeed;
 unsigned int rightSpeed;
 unsigned int lastTurn;
+unsigned int stopcounter = 0;
 
 //port pin constants
 const int ci_Ultrasonic_Ping = 2;   //input plug
@@ -153,11 +153,9 @@ boolean bt_Heartbeat = true;
 boolean bt_3_S_Time_Up = false;
 boolean bt_Do_Once = false;
 boolean bt_Cal_Initialized = false;
-boolean has_flag = false;
-boolean grab_mode = false;
 
 void setup() {
-  Wire.begin();	      // Wire library required for I2CEncoder library
+  Wire.begin();        // Wire library required for I2CEncoder library
   Serial.begin(9600);
 
   CharliePlexM::setBtn(ci_Charlieplex_LED1,ci_Charlieplex_LED2,
@@ -296,35 +294,49 @@ void loop()
          Adjust motor speed according to information from line tracking sensors and 
          possibly encoder counts.
        /*************************************************************************************/
-        if(grab_mode == true){
           
-        }  
         if(followLineInit == false){
-          leftSpeed = ui_Left_Motor_Speed = constrain(ui_Motors_Speed + ui_Left_Motor_Offset, 1500, 2100);
-          rightSpeed = ui_Right_Motor_Speed = constrain(ui_Motors_Speed + ui_Right_Motor_Offset, 1500, 2100);
+          leftSpeed = ui_Left_Motor_Speed = constrain(ui_Motors_Speed + ui_Left_Motor_Offset, 1400, 2100);
+          rightSpeed = ui_Right_Motor_Speed = constrain(ui_Motors_Speed + ui_Right_Motor_Offset, 1400, 2100);
           followLineInit = true; 
         }
         else if ((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))){
           //STOP
-          bt_Motors_Enabled = false;
-          //followLineInit = false;
-          servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop); 
-          servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+          bt_Motors_Enabled = true;
+          followLineInit = true;
+          ui_Left_Motor_Speed = 1495;
+          ui_Right_Motor_Speed = 1495;
+          servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed); 
+          servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+          stopcounter++;
+          
+          if (stopcounter == 1){
+            
+            ui_Left_Motor_Speed = 1450;
+            ui_Right_Motor_Speed = 1550;
+            servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed); 
+            servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+            
+            if (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) {
+               servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop); 
+               servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+               break;
+              }
+            }
           //ui_Robot_State_Index = 0;
-          grab_mode = true;
         }
         else if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance) && ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)){
           // Move Right a little bit
           bt_Motors_Enabled = true;
-          leftSpeed = ui_Left_Motor_Speed = 1705;
-          rightSpeed = ui_Right_Motor_Speed = 1700;
+          leftSpeed = ui_Left_Motor_Speed = 1615;
+          rightSpeed = ui_Right_Motor_Speed = 1600;
           lastTurn = 1;
         }
         else if(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance) && ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)){
           // Move left a little bit
           bt_Motors_Enabled = true;
-          leftSpeed = ui_Left_Motor_Speed = 1700;
-          rightSpeed = ui_Right_Motor_Speed = 1705;
+          leftSpeed = ui_Left_Motor_Speed = 1600;
+          rightSpeed = ui_Right_Motor_Speed = 1615;
           lastTurn = 0;
         }
       
@@ -332,8 +344,8 @@ void loop()
         {
           // Move right a lot
           bt_Motors_Enabled = true;
-          leftSpeed = ui_Left_Motor_Speed = 1705;
-          rightSpeed = ui_Right_Motor_Speed = 1605;
+          leftSpeed = ui_Left_Motor_Speed = 1605;
+          rightSpeed = ui_Right_Motor_Speed = 1505;
           lastTurn = 1;
         }
 
@@ -341,25 +353,25 @@ void loop()
         {
           // Stay stright 
           bt_Motors_Enabled = true;
-          leftSpeed = ui_Left_Motor_Speed = 1750;
-          rightSpeed = ui_Right_Motor_Speed = 1750;    
+          leftSpeed = ui_Left_Motor_Speed = 1650;
+          rightSpeed = ui_Right_Motor_Speed = 1650;    
         }
           
         else if(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
         {
           // Move left a lot
           bt_Motors_Enabled = true;
-          leftSpeed = ui_Left_Motor_Speed = 1605;
-          rightSpeed = ui_Right_Motor_Speed = 1705;
+          leftSpeed = ui_Left_Motor_Speed = 1505;
+          rightSpeed = ui_Right_Motor_Speed = 1605;
           lastTurn= 0;
         } 
         else {
-          if ( lastTurn <= 0){
+          // If robot get totally off track, all three sensors are black
+          if ( lastTurn == 1){
             bt_Motors_Enabled = true;
             leftSpeed = ui_Left_Motor_Speed = 1501;
             rightSpeed = ui_Right_Motor_Speed = 1701;
-          } 
-          else {
+          } else {
             bt_Motors_Enabled = true;
             leftSpeed = ui_Left_Motor_Speed = 1701;
             rightSpeed = ui_Right_Motor_Speed = 1501;
@@ -543,7 +555,7 @@ void loop()
         ui_Mode_Indicator_Index = 4;
       } 
       break;
-    }
+    }    
   }
 
   if((millis() - ul_Display_Time) > ci_Display_Time)
@@ -635,8 +647,7 @@ void Ping()
   Serial.print(", cm: ");
   Serial.println(ul_Echo_Time/58); //divide time by 58 to get distance in cm 
 #endif
-}  
-
+} 
 
 
 
