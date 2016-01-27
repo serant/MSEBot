@@ -1,4 +1,1 @@
-﻿Seran’s Changes
-
-Cool story
--Jake
+Seran’s Changes
