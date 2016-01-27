@@ -91,9 +91,9 @@ const int ci_Right_Motor_Offset_Address_H = 15;
 
 const int ci_Left_Motor_Stop = 1500;        // 200 for brake mode; 1500 for stop
 const int ci_Right_Motor_Stop = 1500;
-const int ci_Grip_Motor_Open = 140;         // Experiment to determine appropriate value
+const int ci_Grip_Motor_Open = 170;         // Experiment to determine appropriate value
 const int ci_Grip_Motor_Closed = 90;        //  "
-const int ci_Arm_Servo_Retracted = 55;      //  "
+const int ci_Arm_Servo_Retracted = 60;      //  "
 const int ci_Arm_Servo_Extended = 120;      //  "
 const int ci_Display_Time = 500;
 const int ci_Line_Tracker_Calibration_Interval = 100;
@@ -302,15 +302,15 @@ void loop()
         }
         else if ((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))){
           //STOP
-          bt_Motors_Enabled = true;
-          followLineInit = true;
-          ui_Left_Motor_Speed = 1495;
-          ui_Right_Motor_Speed = 1495;
-          servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed); 
-          servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-          stopcounter++;
-          
-          if (stopcounter == 1){
+          {
+            bt_Motors_Enabled = false;
+            servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+            servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+            ui_Robot_State_Index = 5;
+
+          }
+            
+          /*if (stopcounter == 1){
             
             ui_Left_Motor_Speed = 1450;
             ui_Right_Motor_Speed = 1550;
@@ -322,7 +322,7 @@ void loop()
                servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
                break;
               }
-            }
+            }*/
           //ui_Robot_State_Index = 0;
         }
         else if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance) && ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)){
@@ -555,6 +555,19 @@ void loop()
         ui_Mode_Indicator_Index = 4;
       } 
       break;
+      
+      case 5:
+      {
+        Ping();
+        if((ul_Echo_Time/58) <= 5){
+          servo_ArmMotor.write(ci_Arm_Servo_Extended);
+          servo_GripMotor.write(ci_Grip_Motor_Open);
+        }
+        unsigned int lightSensorValue = analogRead(ci_Light_Sensor);
+        Serial.println(lightSensorValue);
+
+        break;
+      }
     }    
   }
 
