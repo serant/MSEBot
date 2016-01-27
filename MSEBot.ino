@@ -306,7 +306,7 @@ void loop()
             bt_Motors_Enabled = false;
             servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
             servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
-            ui_Robot_State_Index = 5;
+            ui_Robot_State_Index = 0;
 
           }
             
