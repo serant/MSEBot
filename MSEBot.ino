@@ -95,7 +95,7 @@ const int ci_Right_Motor_Offset_Address_H = 15;
 
 const int ci_Left_Motor_Stop = 1500;        // 200 for brake mode; 1500 for stop
 const int ci_Right_Motor_Stop = 1500;
-const int ci_Grip_Motor_Open = 140;         // Experiment to determine appropriate value
+const int ci_Grip_Motor_Open = 170;         // Experiment to determine appropriate value
 const int ci_Grip_Motor_Closed = 90;        //  "
 const int ci_Arm_Servo_Retracted = 55;      //  "
 const int ci_Arm_Servo_Extended = 120;      //  "
@@ -135,6 +135,7 @@ unsigned int ui_Middle_Line_Tracker_Light;
 unsigned int ui_Right_Line_Tracker_Dark;
 unsigned int ui_Right_Line_Tracker_Light;
 unsigned int ui_Line_Tracker_Tolerance;
+unsigned int switchDirection= 200;
 
 unsigned int  ui_Robot_State_Index = 0;
 //0123456789ABCDEF
@@ -302,22 +303,60 @@ void loop()
          Add line tracking code here. 
          Adjust motor speed according to information from line tracking sensors and 
          possibly encoder counts.
+         
+         DESCRIPTION OF EVERYTHING KIND OF
+         
+         when you first enter the line tracking, there are three conditionals: if all three sensors are light, line tracking if the robot isn't in the middle of turn/retrieve/place, line tracking
+           if it is in the middle of something
+           
+         POINT A
+         this loop occurs if all three sensors are on the line (i.e. if at a stop point)
+         the turning varaible is essentially what switches it from a mode that involves tracking the line (POINT B) and the mode where it does retrieval/turning stuff (POINT C)
+         the stopCounter variable is used to determine what stage it's at; case 1 (stopCounter = 1) is when it's the first time it hits the first stop point
+         case 2 (stopCounter = 2) is when the robot finds the line that leads to the box. This is when it sends the robot through the Search(); function
+         case 3 will be the journey to the dropoff point..... but the search function isn't working yet
+         
+         POINT B: this is the normal line tracking stuff from lab 3. So essentially when turning == false, it will go to these statements, meaning that it's just regular line tracking going on atm
+         POINT C: this is essentially things that work in conjunction to POINT A when the sensors are not all on the stop point but the robot is in the middle of something. The reason the turn wasn't
+         working well before was because the robot would lose track of what to do once one of the sensors move off the yellow because then it goes to the general line tracking stuff. So the idea here is 
+         to split the line tracking code in POINT B from the stuff in POINT C. Now when the robot turns to face the box, it still knows to keep turning when the sensors go off of the yellow tape
+         There's a really life if statement in POINT C that tells the robot to go back to tracking the line when the middle sensor finds the line and the box is within a certain distance. This is what
+         lets the robot run on any track since it will only continue when it find a line that is near the box
+         
+         What the next step is:
+         
+         The Search() function at the bottom doesn't work yet. Essentially all it needs to do is make the robot look left and right until the light value for the LED sensor is less than 140 (indicating
+         the flag is in sight). If you look at my code right now in the search function, i multiple a variable by -1. So if you go through the algorithm slowly you'll see that it flips the speed
+         every time the loop is run.
+         
+         So essentially:
+         
+         the robot is going to turn right and look for the LED flag until the ultra sonic sensor notices that there is more than 4cm of distance away from it (indicating that it's turned passed the box)
+         once this happens, it'll run through the code in the if statement which flips the speed and the robot will start going the other way
+         
+         the problem is that when it flips the speeds, the robot doesn't have a chance to move before the loop runs again and the ultra sonic sensor notices that the box is still out of view, so it 
+         flips the speeds again -> this literally just keeps happening forever and ever and it looks like a seizure
+         
+         so if we can figure a way to get it so that it gives the robot a chance to correct its mistake before reanalyzing the distance from the box again, it should work!
        /*************************************************************************************/
-        
-        //ENDPOINT
+                
+        //POINT A
         if ((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))){
          turning = true;
          switch(stopCounter){
            case 1:
            {
-             leftSpeed = 1700;
-             rightSpeed = 1300;
+             //robot spins
+             leftSpeed = 1700;//makes left wheel go forward
+             rightSpeed = 1300;//makes right wheel go backwards
              break;
            }
            
            case 2:
            {
              Search();
+             servo_ArmMotor.write(ci_Arm_Servo_Search);
+             servo_GripMotor.write(ci_Grip_Motor_Open);
              break;
            }
            
@@ -332,6 +371,7 @@ void loop()
          }
         }
         
+        //POINT B
         if(!turning){
           if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance) && ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)){
           // Move Right a little bit
@@ -380,13 +420,14 @@ void loop()
           }
         }
         
+        //POINT C
         else{
-          if((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Data - ui_Line_Tracker_Tolerance)) && ((ul_Echo_Time/58)<20)){
+          if((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Data - ui_Line_Tracker_Tolerance)) && ((ul_Echo_Time/58)<20)&& (stopCounter == 1)){
             turning = false;
             stopCounter = 2;
           }
         }
-        
+        //END OF POINT C
                 
         if(bt_Motors_Enabled)
         {
@@ -680,35 +721,21 @@ void Grab(){
 }    
 void Search()
 {
-  // Light sensor function
-  if((analogRead(ci_Light_Sensor) < 150) && foundFlag == false){
-    servo_GripMotor.write(ci_Grip_Motor_Closed);
-    Serial.println("FOUND FLAG");
+  leftSpeed = 1600;
+  rightSpeed = 1400;
+  if(ul_Echo_Time/58 > 4){
+    switchDirection *= (-1);
+    leftSpeed += switchDirection;
+    switchDirection *= (-1);
+    rightSpeed += switchDirection;
+    switchDirection *= (-1);
   }
-  else{
-    if(((ul_Echo_Time/58) < 10)&& beginRightTurn == true){
-    leftSpeed = 1600;//goes forwards slowly
-    rightSpeed = 1400;//goes backwards slowly
-    }
-    else if(((ul_Echo_Time/58) > 10) && beginRightTurn == true){
-      beginRightTurn = false;
-    }
-    
-    if(((ul_Echo_Time/58)<6)&& beginRightTurn == false){
-      leftSpeed = 1400;//goes backwards slowly
-      rightSpeed = 1600; //goes forwards slowly
-    }
-    else if((ul_Echo_Time/58 > 10) && beginRightTurn == false){
-      beginRightTurn = true;
-    }
-  }
-  servo_LeftMotor.writeMicroseconds(leftSpeed);
-  servo_RightMotor.writeMicroseconds(rightSpeed);    
 }
 
 void Release(){
   
 }
+
 
 
 
