@@ -298,12 +298,15 @@ void loop()
          Adjust motor speed according to information from line tracking sensors and 
          possibly encoder counts.
        /*************************************************************************************/
-          
+        
+        //initializes the motor speeds upon clicking the mode 1 button : we might be able to take this out  
         if(followLineInit == false){
           leftSpeed = ui_Left_Motor_Speed = constrain(ui_Motors_Speed + ui_Left_Motor_Offset, 1300, 2100);
           rightSpeed = ui_Right_Motor_Speed = constrain(ui_Motors_Speed + ui_Right_Motor_Offset, 1300, 2100);
           followLineInit = true; 
         }
+        
+        //STOP FUNCTION
         else if ((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))){
           //STOP
           bt_Motors_Enabled = true;
@@ -315,6 +318,7 @@ void loop()
           servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
           Serial.println("Motor stopping");*/
           
+         //if the robot just started, it will be at flag1 = true
          if ( flag1 == true) {
           stopcounter++;
           flag1 = false; 
