@@ -98,6 +98,7 @@ const int ci_Grip_Motor_Open = 140;         // Experiment to determine appropria
 const int ci_Grip_Motor_Closed = 90;        //  "
 const int ci_Arm_Servo_Retracted = 55;      //  "
 const int ci_Arm_Servo_Extended = 120;      //  "
+const int ci_Arm_Servo_Search = 85;
 const int ci_Display_Time = 500;
 const int ci_Line_Tracker_Calibration_Interval = 100;
 const int ci_Line_Tracker_Cal_Measures = 20;
@@ -686,7 +687,7 @@ void Ping()
 #endif
 } 
 void Grab(){
-  if ((ul_Echo_Time/148)  > 4){
+  if ((ul_Echo_Time/58)  > 4){
     ui_Left_Motor_Speed = 1600;
     ui_Right_Motor_Speed = 1600;
     servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed); 
@@ -696,7 +697,7 @@ void Grab(){
     ui_Right_Motor_Speed = 1500;
     servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed); 
     servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-    servo_ArmMotor.write(ci_Arm_Servo_Retracted + 40);
+    servo_ArmMotor.write(ci_Arm_Servo_Search);
     servo_GripMotor.write(ci_Grip_Motor_Open);
     delay (2000);
     servo_ArmMotor.write(ci_Arm_Servo_Extended);
