@@ -34,8 +34,8 @@ I2CEncoder encoder_LeftMotor;
 //#define DEBUG_ENCODERS
 //#define DEBUG_ULTRASONIC
 //#define DEBUG_LINE_TRACKER_CALIBRATION
-#define DEBUG_MOTOR_CALIBRATION
-
+//#define DEBUG_MOTOR_CALIBRATION
+//#define DEBUG_LIGHT_SENSOR
 boolean bt_Motors_Enabled = true;
 boolean followLineInit = false;
 unsigned int leftSpeed;
@@ -328,7 +328,7 @@ void loop()
             }
          else if ( stopcounter == 2 ){
           if (flag2 == true){
-           Ping1();
+           Grab();
            flag2 = false;
           }
            leftSpeed = ui_Left_Motor_Speed = 1600;
@@ -685,7 +685,7 @@ void Ping()
   Serial.println(ul_Echo_Time/58); //divide time by 58 to get distance in cm 
 #endif
 } 
-void Ping1(){
+void Grab(){
   if ((ul_Echo_Time/148)  > 4){
     ui_Left_Motor_Speed = 1600;
     ui_Right_Motor_Speed = 1600;
@@ -706,18 +706,18 @@ void Ping1(){
     servo_ArmMotor.write(ci_Arm_Servo_Retracted );
     
     
-    lightsensor();
+    Search();
     // Light sensor function
   }
 }
-void Ping2(){
+void Release(){
   
 }
-void lightsensor(){
-  
+void Search(){
+  //begin to turn slowly left and right until the light tracker value is 
+  #ifdef DEBUG_LIGHT_SENSOR
+  Serial.println(digitalWrite(ci_light_sensor));
+  #endif
 }
-
-
-
 
 
