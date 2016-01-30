@@ -29,3 +29,19 @@ to switch branches
 git checkout **type branch name**
 
 after you have checked out a branch, whenever you push your changes it will go onto that branch
+
+Sequence of Events
+robot should stop on yellow line
+move forward using ultrasonic sensor (4cm away) 
+raise arm to flag light height 
+open claw 
+move side to side to find light 
+read light sensor 
+if light sensor less than 110 
+extend arm fully 
+clamp claw 
+retract arm 
+Continue on line 
+
+
+
