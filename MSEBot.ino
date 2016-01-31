@@ -733,8 +733,8 @@ void Search()
   } */
   
   if ( ci_Light_Sensor < 115){
-    leftSpeed = 1500;
-    rightSpeed = 1500;
+    leftSpeed = ci_Left_Motor_Stop;
+    rightSpeed = ci_Right_Motor_Stop;
     servo_LeftMotor.writeMicroseconds(leftSpeed); 
     servo_RightMotor.writeMicroseconds(rightSpeed);
     servo_ArmMotor.write(ci_Arm_Servo_Extended);
