@@ -32,7 +32,7 @@ I2CEncoder encoder_LeftMotor;
 //#define DEBUG_MOTORS
 //#define DEBUG_LINE_TRACKERS
 //#define DEBUG_ENCODERS
-#define DEBUG_ULTRASONIC
+//#define DEBUG_ULTRASONIC
 //#define DEBUG_LINE_TRACKER_CALIBRATION
 //#define DEBUG_MOTOR_CALIBRATION
 //#define DEBUG_LIGHT_SENSOR
@@ -41,6 +41,8 @@ boolean followLineInit = false;
 unsigned int leftSpeed;
 unsigned int rightSpeed;
 unsigned int lastTurn;
+long searchtimer;
+long searchtimer2;
 
 int stopCounter = 1;
 bool flag1 = true;
@@ -135,7 +137,7 @@ unsigned int ui_Middle_Line_Tracker_Light;
 unsigned int ui_Right_Line_Tracker_Dark;
 unsigned int ui_Right_Line_Tracker_Light;
 unsigned int ui_Line_Tracker_Tolerance;
-unsigned int switchDirection= 200;
+unsigned int switchDirection= 50;
 
 unsigned int  ui_Robot_State_Index = 0;
 //0123456789ABCDEF
@@ -704,38 +706,56 @@ void Grab(){
     servo_LeftMotor.writeMicroseconds(leftSpeed); 
     servo_RightMotor.writeMicroseconds(rightSpeed);
   } else {
-    //ui_Left_Motor_Speed = ci_Left_Motor_Stop;
-    //ui_Right_Motor_Speed = ci_Right_Motor_Stop;
-    //servo_LeftMotor.writeMicroseconds(leftSpeed); 
-    //servo_RightMotor.writeMicroseconds(rightSpeed);
+    servo_LeftMotor.writeMicroseconds(1500);
+    servo_RightMotor.writeMicroseconds(1500);
     servo_ArmMotor.write(ci_Arm_Servo_Search);
     servo_GripMotor.write(ci_Grip_Motor_Open);
-    //delay (2000);
-    //servo_ArmMotor.write(ci_Arm_Servo_Extended);
-    //delay (1000);
-    //servo_GripMotor.write(ci_Grip_Motor_Closed);
-    //delay (1000);
-    //servo_ArmMotor.write(ci_Arm_Servo_Retracted );
     Search();
   }
 }    
 void Search()
 {
-  leftSpeed = 1600;
-  rightSpeed = 1400;
-  if(ul_Echo_Time/58 > 4){
-    switchDirection *= (-1);
-    leftSpeed += switchDirection;
-    switchDirection *= (-1);
-    rightSpeed += switchDirection;
-    switchDirection *= (-1);
+  searchtimer = millis();
+  while ( searchtimer - searchtimer2 <3000 && ci_Light_Sensor > 115 ){ // turns for 3 seconds or until light sensor is activated
+  leftSpeed = 1515;
+  rightSpeed = 1475;
+  searchtimer2 = millis();
+  }
+  while (searchtimer - searchtimer2 <5000 && ci_Light_Sensor > 115){ // turns for 5 seconds in the other direction or until light sensor is activated 
+    leftSpeed = 1475;
+    rightSpeed = 1515;
+    searchtimer2 = millis();
+  }
+  
+  /*if(ul_Echo_Time/58 > 4){ // move forward if 
+    leftSpeed = 1515;
+    rightSpeed = 1515;
+  } */
+  
+  if ( ci_Light_Sensor < 115){
+    leftSpeed = 1500;
+    rightSpeed = 1500;
+    servo_LeftMotor.writeMicroseconds(leftSpeed); 
+    servo_RightMotor.writeMicroseconds(rightSpeed);
+    servo_ArmMotor.write(ci_Arm_Servo_Extended);
+    delay(2000);
+    servo_GripMotor.write(ci_Grip_Motor_Closed);
+    delay(1000);
+    servo_ArmMotor.write(ci_Arm_Servo_Search);
   }
 }
 
 void Release(){
-  
+  if ((ul_Echo_Time/58)  > 4){
+    leftSpeed = 1600;
+    rightSpeed = 1600;
+    servo_LeftMotor.writeMicroseconds(leftSpeed); 
+    servo_RightMotor.writeMicroseconds(rightSpeed);
+  } else {
+    servo_ArmMotor.write(ci_Arm_Servo_Extended);
+    delay (2000);
+    servo_GripMotor.write(ci_Grip_Motor_Open);
+    delay (1000);
+    servo_ArmMotor.write(ci_Arm_Servo_Retracted);
+  }
 }
-
-
-
-
