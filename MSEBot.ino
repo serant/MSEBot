@@ -32,7 +32,7 @@ I2CEncoder encoder_LeftMotor;
 //#define DEBUG_MOTORS
 //#define DEBUG_LINE_TRACKERS
 //#define DEBUG_ENCODERS
-//#define DEBUG_ULTRASONIC
+#define DEBUG_ULTRASONIC
 //#define DEBUG_LINE_TRACKER_CALIBRATION
 //#define DEBUG_MOTOR_CALIBRATION
 //#define DEBUG_LIGHT_SENSOR
@@ -700,7 +700,7 @@ void Ping()
 #endif
 } 
 void Grab(){
-  if ((ul_Echo_Time/58)  > 4){
+  if ((ul_Echo_Time/58)  > 1){
     leftSpeed = 1600;
     rightSpeed = 1600;
   //  servo_LeftMotor.writeMicroseconds(leftSpeed); 
@@ -747,6 +747,7 @@ void Search()
     servo_GripMotor.write(ci_Grip_Motor_Closed);
     delay(1000);
     servo_ArmMotor.write(ci_Arm_Servo_Search);
+    delay(1000);
     stopCounter++;
   }
 }
