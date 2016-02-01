@@ -700,11 +700,12 @@ void Ping()
 #endif
 } 
 void Grab(){
-  if ((ul_Echo_Time/58)  > 3){
+  Ping();
+  if ((ul_Echo_Time/58)  > 2){
     leftSpeed = 1600;
     rightSpeed = 1600;
-  //  servo_LeftMotor.writeMicroseconds(leftSpeed); 
-  //  servo_RightMotor.writeMicroseconds(rightSpeed);
+    servo_LeftMotor.writeMicroseconds(leftSpeed); 
+    servo_RightMotor.writeMicroseconds(rightSpeed);
   } else {
   //  servo_LeftMotor.writeMicroseconds(1500);
   //  servo_RightMotor.writeMicroseconds(1500);
@@ -717,14 +718,14 @@ void Search()
 {
   searchtimer = millis();
   searchtimer2 = millis();
-  while ((( searchtimer - searchtimer2) <1000) && (analogRead(ci_Light_Sensor) > 130 )){ // turns for 3 seconds or until light sensor is activated
+  while ((( searchtimer - searchtimer2) <1000) && (analogRead(ci_Light_Sensor) > 150 )){ // turns for 3 seconds or until light sensor is activated
   leftSpeed = 1575;
   rightSpeed = 1425;
   servo_LeftMotor.writeMicroseconds(leftSpeed); 
   servo_RightMotor.writeMicroseconds(rightSpeed);
   searchtimer = millis();
   }
-  while (((searchtimer - searchtimer2) <4000) && (analogRead(ci_Light_Sensor) > 130)){ // turns for 5 seconds in the other direction or until light sensor is activated 
+  while (((searchtimer - searchtimer2) <4000) && (analogRead(ci_Light_Sensor) > 150)){ // turns for 5 seconds in the other direction or until light sensor is activated 
     leftSpeed = 1425;
     rightSpeed = 1575;
     servo_LeftMotor.writeMicroseconds(leftSpeed); 
@@ -737,7 +738,7 @@ void Search()
     rightSpeed = 1515;
   } */
   
-  if ( analogRead(ci_Light_Sensor) < 130){
+  if ( analogRead(ci_Light_Sensor) < 150 && ((ul_Echo_Time/58)< 3)){
     leftSpeed = ci_Left_Motor_Stop;
     rightSpeed = ci_Right_Motor_Stop;
     servo_LeftMotor.writeMicroseconds(leftSpeed); 
@@ -749,7 +750,13 @@ void Search()
     servo_ArmMotor.write(ci_Arm_Servo_Search);
     delay(1000);
     stopCounter++;
+  } else {
+    leftSpeed = 1550;
+    rightSpeed = 1550;
+    servo_LeftMotor.writeMicroseconds(leftSpeed); 
+    servo_RightMotor.writeMicroseconds(rightSpeed);
   }
+  
 }
 
 /*void Release(){
