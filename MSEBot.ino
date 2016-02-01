@@ -32,7 +32,7 @@ I2CEncoder encoder_LeftMotor;
 //#define DEBUG_MOTORS
 //#define DEBUG_LINE_TRACKERS
 //#define DEBUG_ENCODERS
-#define DEBUG_ULTRASONIC
+//#define DEBUG_ULTRASONIC
 //#define DEBUG_LINE_TRACKER_CALIBRATION
 //#define DEBUG_MOTOR_CALIBRATION
 //#define DEBUG_LIGHT_SENSOR
@@ -101,7 +101,7 @@ const int ci_Grip_Motor_Open = 170;         // Experiment to determine appropria
 const int ci_Grip_Motor_Closed = 90;        //  "
 const int ci_Arm_Servo_Retracted = 55;      //  "
 const int ci_Arm_Servo_Extended = 120;      //  "
-const int ci_Arm_Servo_Search = 85;
+const int ci_Arm_Servo_Search = 90;
 const int ci_Display_Time = 500;
 const int ci_Line_Tracker_Calibration_Interval = 100;
 const int ci_Line_Tracker_Cal_Measures = 20;
@@ -364,8 +364,8 @@ void loop()
            
            case 3:
            {
-             leftSpeed = ui_Left_Motor_Speed = 1700;
-             rightSpeed = ui_Right_Motor_Speed = 1300;
+             leftSpeed = ui_Left_Motor_Speed = 1300;
+             rightSpeed = ui_Right_Motor_Speed = 1700;
              servo_LeftMotor.writeMicroseconds(leftSpeed); 
              servo_RightMotor.writeMicroseconds(rightSpeed);
              break;
@@ -700,7 +700,7 @@ void Ping()
 #endif
 } 
 void Grab(){
-  if ((ul_Echo_Time/58)  > 1){
+  if ((ul_Echo_Time/58)  > 3){
     leftSpeed = 1600;
     rightSpeed = 1600;
   //  servo_LeftMotor.writeMicroseconds(leftSpeed); 
@@ -717,16 +717,16 @@ void Search()
 {
   searchtimer = millis();
   searchtimer2 = millis();
-  while ((( searchtimer - searchtimer2) <3000) && (analogRead(ci_Light_Sensor) > 150 )){ // turns for 3 seconds or until light sensor is activated
-  leftSpeed = 1550;
-  rightSpeed = 1450;
+  while ((( searchtimer - searchtimer2) <1000) && (analogRead(ci_Light_Sensor) > 130 )){ // turns for 3 seconds or until light sensor is activated
+  leftSpeed = 1575;
+  rightSpeed = 1425;
   servo_LeftMotor.writeMicroseconds(leftSpeed); 
   servo_RightMotor.writeMicroseconds(rightSpeed);
   searchtimer = millis();
   }
-  while (((searchtimer - searchtimer2) <6000) && (analogRead(ci_Light_Sensor) > 150)){ // turns for 5 seconds in the other direction or until light sensor is activated 
-    leftSpeed = 1450;
-    rightSpeed = 1550;
+  while (((searchtimer - searchtimer2) <4000) && (analogRead(ci_Light_Sensor) > 130)){ // turns for 5 seconds in the other direction or until light sensor is activated 
+    leftSpeed = 1425;
+    rightSpeed = 1575;
     servo_LeftMotor.writeMicroseconds(leftSpeed); 
     servo_RightMotor.writeMicroseconds(rightSpeed);
     searchtimer = millis();
@@ -737,7 +737,7 @@ void Search()
     rightSpeed = 1515;
   } */
   
-  if ( analogRead(ci_Light_Sensor) < 150){
+  if ( analogRead(ci_Light_Sensor) < 130){
     leftSpeed = ci_Left_Motor_Stop;
     rightSpeed = ci_Right_Motor_Stop;
     servo_LeftMotor.writeMicroseconds(leftSpeed); 
