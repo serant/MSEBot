@@ -362,14 +362,14 @@ void loop()
              break;
            }
            
-           /*case 3:
+           case 3:
            {
-             leftSpeed = ui_Left_Motor_Speed = 1300;
-             rightSpeed = ui_Right_Motor_Speed = 1700;
+             leftSpeed = ui_Left_Motor_Speed = 1700;
+             rightSpeed = ui_Right_Motor_Speed = 1300;
              servo_LeftMotor.writeMicroseconds(leftSpeed); 
              servo_RightMotor.writeMicroseconds(rightSpeed);
              break;
-           }*/
+           }
          }
         }
         
@@ -717,14 +717,14 @@ void Search()
 {
   searchtimer = millis();
   searchtimer2 = millis();
-  while ((( searchtimer - searchtimer2) <3000) && (ci_Light_Sensor > 150 )){ // turns for 3 seconds or until light sensor is activated
+  while ((( searchtimer - searchtimer2) <3000) && (analogRead(ci_Light_Sensor) > 150 )){ // turns for 3 seconds or until light sensor is activated
   leftSpeed = 1550;
   rightSpeed = 1450;
   servo_LeftMotor.writeMicroseconds(leftSpeed); 
   servo_RightMotor.writeMicroseconds(rightSpeed);
   searchtimer = millis();
   }
-  while (((searchtimer - searchtimer2) <6000) && (ci_Light_Sensor > 150)){ // turns for 5 seconds in the other direction or until light sensor is activated 
+  while (((searchtimer - searchtimer2) <6000) && (analogRead(ci_Light_Sensor) > 150)){ // turns for 5 seconds in the other direction or until light sensor is activated 
     leftSpeed = 1450;
     rightSpeed = 1550;
     servo_LeftMotor.writeMicroseconds(leftSpeed); 
@@ -737,7 +737,7 @@ void Search()
     rightSpeed = 1515;
   } */
   
-  if ( ci_Light_Sensor < 150){
+  if ( analogRead(ci_Light_Sensor) < 150){
     leftSpeed = ci_Left_Motor_Stop;
     rightSpeed = ci_Right_Motor_Stop;
     servo_LeftMotor.writeMicroseconds(leftSpeed); 
@@ -747,6 +747,7 @@ void Search()
     servo_GripMotor.write(ci_Grip_Motor_Closed);
     delay(1000);
     servo_ArmMotor.write(ci_Arm_Servo_Search);
+    stopCounter++;
   }
 }
 
