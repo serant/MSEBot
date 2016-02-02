@@ -232,12 +232,18 @@ void setup() {
   ui_Right_Motor_Offset = word(b_HighByte, b_LowByte);
 }
 
-
+boolean turn = true;
 void loop() {
   // put your main code here, to run repeatedly:
-  servo_ArmMotor.write(93);
-  servo_GripMotor.write(180);
-
+  
+   if(turn){
+     turn = false;
+     servo_LeftMotor.write(servo_LeftMotor.read()-10);
+     servo_RightMotor.write(servo_RightMotor.read()+10);
+     delay(1200);
+     servo_LeftMotor.write(1500);
+     servo_RightMotor.write(1500);
+   }
 
 }
 

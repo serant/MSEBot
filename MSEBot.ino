@@ -365,8 +365,8 @@ void loop()
            
            case 3:
            {
-             leftSpeed = ui_Left_Motor_Speed = 1425;
-             rightSpeed = ui_Right_Motor_Speed = 1425;
+             leftSpeed = 1400;
+             rightSpeed = 1600;
              servo_LeftMotor.writeMicroseconds(leftSpeed); 
              servo_RightMotor.writeMicroseconds(rightSpeed);
              //turning = false;
@@ -426,9 +426,13 @@ void loop()
         
         //POINT C
         else{
-          if((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Data - ui_Line_Tracker_Tolerance)) && ((ul_Echo_Time/58)<20)&& (stopCounter == 1)){
+          if((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Data - ui_Line_Tracker_Tolerance)) && ((ul_Echo_Time/58)<20)&& (stopCounter == 1) && !foundFlag){
             turning = false;
             stopCounter = 2;
+          }
+          else if(foundFlag && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Data - ui_Line_Tracker_Tolerance))){
+            turning = false;
+            stopCounter = 4;
           }
         }
         //END OF POINT C
@@ -746,9 +750,34 @@ void Search()
   delay(1000);
   servo_ArmMotor.write(ci_Arm_Servo_Retracted);
   delay(1000);
+  foundFlag = true;
   stopCounter++;
+  Turn();
 }
-
+void Turn(){
+   while(!(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
+   {
+     readLineTrackers();
+     servo_LeftMotor.writeMicroseconds(1400);
+     servo_RightMotor.writeMicroseconds(1400);
+   }
+   servo_LeftMotor.write(servo_LeftMotor.read()-10);
+   servo_RightMotor.write(servo_RightMotor.read()+10);
+   delay(1200);
+   readLineTrackers();
+   
+   //if only one of the lines are tracked
+   while(((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance)))||
+   (!(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance)))||
+   (!(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))))
+   {
+     Serial.println("ENTERING LOOP: FOUND LINE");
+     readLineTrackers();
+     servo_LeftMotor.writeMicroseconds(1400);
+     servo_RightMotor.writeMicroseconds(1600);
+   }
+   turning = false;
+}
 /*void Release(){
   if ((ul_Echo_Time/58)  > 4){
     leftSpeed = 1600;
