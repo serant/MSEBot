@@ -46,6 +46,7 @@ unsigned long previousTime;
 unsigned long interval = 500;
 
 int stopCounter = 1;
+boolean finalFlag = false;
 bool flag1 = true;
 bool flag2 = false;
 
@@ -346,6 +347,7 @@ void loop()
         //POINT A
         if ((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))){
          turning = true;
+         finalFlag = true;
          switch(stopCounter){
            case 1:
            {
@@ -418,7 +420,7 @@ void loop()
             
           }
           
-          else if(!((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))) && foundFlag){
+          else if(!((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))) && foundFlag && finalFlag){
             bt_Motors_Enabled = true;
             leftSpeed = ui_Left_Motor_Speed = 1650;
             rightSpeed = ui_Right_Motor_Speed = 1650;
@@ -759,6 +761,8 @@ void Search()
   foundFlag = true;
   stopCounter++;
   Turn('R');
+  finalFlag = false;
+
 }
 void Turn(char turningDirection){
    while(!(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
@@ -769,7 +773,7 @@ void Turn(char turningDirection){
    }
    servo_LeftMotor.write(servo_LeftMotor.read()-10);
    servo_RightMotor.write(servo_RightMotor.read()+10);
-   delay(1200);
+   delay(1300);
    readLineTrackers();
    
    //continue until only one of the lines are tracked
