@@ -375,7 +375,7 @@ void loop()
           if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance) && ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)){
           // Move Right a little bit
           bt_Motors_Enabled = true;
-          leftSpeed = ui_Left_Motor_Speed = 1615;
+          leftSpeed = ui_Left_Motor_Speed = 1625;
           rightSpeed = ui_Right_Motor_Speed = 1600;
           lastTurn = 1;
           
@@ -384,7 +384,7 @@ void loop()
             // Move left a little bit
             bt_Motors_Enabled = true;
             leftSpeed = ui_Left_Motor_Speed = 1600;
-            rightSpeed = ui_Right_Motor_Speed = 1615;
+            rightSpeed = ui_Right_Motor_Speed = 1625;
             lastTurn = 0;
             
           }
@@ -416,6 +416,16 @@ void loop()
             rightSpeed = ui_Right_Motor_Speed = 1605;
             lastTurn= 0;
             
+          }
+          
+          else if(!((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))) && foundFlag){
+            bt_Motors_Enabled = true;
+            leftSpeed = ui_Left_Motor_Speed = 1650;
+            rightSpeed = ui_Right_Motor_Speed = 1650;
+            lastTurn = 0;
+            if(((ul_Echo_Time / 58) < 4) && ((ul_Echo_Time/58) != 0)){
+              Release();
+            }
           }
         }
         
@@ -770,8 +780,8 @@ void Turn(char turningDirection){
      Serial.println("ENTERING LOOP: FOUND LINE");
      readLineTrackers();
      if(turningDirection = 'R'){
-       servo_LeftMotor.writeMicroseconds(1400);
-       servo_RightMotor.writeMicroseconds(1600);
+       servo_LeftMotor.writeMicroseconds(1300);
+       servo_RightMotor.writeMicroseconds(1700);
      }
      else if(turningDirection == 'L'){
        servo_LeftMotor.writeMicroseconds(1600);
@@ -782,10 +792,14 @@ void Turn(char turningDirection){
 }
 
 void FinalTurn(){
+   servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+   servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+   delay(200);
    servo_LeftMotor.write(servo_LeftMotor.read()+10);
    servo_RightMotor.write(servo_RightMotor.read()-10);
    delay(1200);
    readLineTrackers();
+   
    
    //continue until only one of the lines are tracked
    while(!(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance)))
@@ -796,19 +810,20 @@ void FinalTurn(){
      servo_RightMotor.writeMicroseconds(1400);
      turning = false;
   }
+  servo_ArmMotor.write(ci_Arm_Servo_Search);
 }
-/*void Release(){
-  if ((ul_Echo_Time/58)  > 4){
-    leftSpeed = 1600;
-    rightSpeed = 1600;
-    servo_LeftMotor.writeMicroseconds(leftSpeed); 
-    servo_RightMotor.writeMicroseconds(rightSpeed);
-  } else {
+void Release(){
+    servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop); 
+    servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+    delay(500);
     servo_ArmMotor.write(ci_Arm_Servo_Extended);
-    delay (2000);
-    servo_GripMotor.write(ci_Grip_Motor_Open);
     delay (1000);
+    servo_GripMotor.write(ci_Grip_Motor_Open);
+    delay (2000);
     servo_ArmMotor.write(ci_Arm_Servo_Retracted);
+    delay(1000);
+    servo_ArmMotor.write(ci_Grip_Motor_Closed);
+    delay(1000);
+    ui_Robot_State_Index = 0;
   }
-}*/
 
