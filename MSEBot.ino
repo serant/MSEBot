@@ -365,12 +365,7 @@ void loop()
            
            case 3:
            {
-             leftSpeed = 1400;
-             rightSpeed = 1600;
-             servo_LeftMotor.writeMicroseconds(leftSpeed); 
-             servo_RightMotor.writeMicroseconds(rightSpeed);
-             //turning = false;
-             break;
+             FinalTurn();
            }
          }
         }
@@ -423,6 +418,7 @@ void loop()
             
           }
         }
+        
         
         //POINT C
         else{
@@ -752,9 +748,9 @@ void Search()
   delay(1000);
   foundFlag = true;
   stopCounter++;
-  Turn();
+  Turn('R');
 }
-void Turn(){
+void Turn(char turningDirection){
    while(!(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
    {
      readLineTrackers();
@@ -766,17 +762,40 @@ void Turn(){
    delay(1200);
    readLineTrackers();
    
-   //if only one of the lines are tracked
-   while(((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance)))||
+   //continue until only one of the lines are tracked
+   while(!(((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance)))||
    (!(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance)))||
-   (!(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))))
+   (!(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance)))))
    {
      Serial.println("ENTERING LOOP: FOUND LINE");
      readLineTrackers();
-     servo_LeftMotor.writeMicroseconds(1400);
-     servo_RightMotor.writeMicroseconds(1600);
+     if(turningDirection = 'R'){
+       servo_LeftMotor.writeMicroseconds(1400);
+       servo_RightMotor.writeMicroseconds(1600);
+     }
+     else if(turningDirection == 'L'){
+       servo_LeftMotor.writeMicroseconds(1600);
+       servo_RightMotor.writeMicroseconds(1400);
+     }
    }
    turning = false;
+}
+
+void FinalTurn(){
+   servo_LeftMotor.write(servo_LeftMotor.read()+10);
+   servo_RightMotor.write(servo_RightMotor.read()-10);
+   delay(1200);
+   readLineTrackers();
+   
+   //continue until only one of the lines are tracked
+   while(!(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance)))
+  {
+     Serial.println("ENTERING LOOP: FOUND LINE");
+     readLineTrackers();
+     servo_LeftMotor.writeMicroseconds(1600);
+     servo_RightMotor.writeMicroseconds(1400);
+     turning = false;
+  }
 }
 /*void Release(){
   if ((ul_Echo_Time/58)  > 4){
