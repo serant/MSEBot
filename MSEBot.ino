@@ -346,7 +346,10 @@ void loop()
                 
         //POINT A
         if ((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))){
-         turning = true;
+         if(!foundFlag){
+           turning = true;
+         }
+           
          finalFlag = true;
          switch(stopCounter){
            case 1:
@@ -377,7 +380,7 @@ void loop()
           if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance) && ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)){
           // Move Right a little bit
           bt_Motors_Enabled = true;
-          leftSpeed = ui_Left_Motor_Speed = 1625;
+          leftSpeed = ui_Left_Motor_Speed = 1650;
           rightSpeed = ui_Right_Motor_Speed = 1600;
           lastTurn = 1;
           
@@ -386,7 +389,7 @@ void loop()
             // Move left a little bit
             bt_Motors_Enabled = true;
             leftSpeed = ui_Left_Motor_Speed = 1600;
-            rightSpeed = ui_Right_Motor_Speed = 1625;
+            rightSpeed = ui_Right_Motor_Speed = 1650;
             lastTurn = 0;
             
           }
@@ -395,7 +398,7 @@ void loop()
           {
             // Move right a lot
             bt_Motors_Enabled = true;
-            leftSpeed = ui_Left_Motor_Speed = 1605;
+            leftSpeed = ui_Left_Motor_Speed = 1650;
             rightSpeed = ui_Right_Motor_Speed = 1505;
             lastTurn = 1;
             
@@ -405,8 +408,8 @@ void loop()
           {
             // Stay stright 
             bt_Motors_Enabled = true;
-            leftSpeed = ui_Left_Motor_Speed = 1650;
-            rightSpeed = ui_Right_Motor_Speed = 1650;
+            leftSpeed = ui_Left_Motor_Speed = 1700;
+            rightSpeed = ui_Right_Motor_Speed = 1700;
             flag1 = true;    
           }
             
@@ -415,7 +418,7 @@ void loop()
             // Move left a lot
             bt_Motors_Enabled = true;
             leftSpeed = ui_Left_Motor_Speed = 1505;
-            rightSpeed = ui_Right_Motor_Speed = 1605;
+            rightSpeed = ui_Right_Motor_Speed = 1650;
             lastTurn= 0;
             
           }
@@ -756,15 +759,18 @@ void Search()
   delay(2000);
   servo_GripMotor.write(ci_Grip_Motor_Closed);
   delay(1000);
-  servo_ArmMotor.write(ci_Arm_Servo_Retracted);
+  for(int i = 120; i >= 55; i-=5){
+    servo_ArmMotor.write(i);
+    delay(100);
+  }
   delay(1000);
   foundFlag = true;
   stopCounter++;
-  Turn('R');
+  Turn();
   finalFlag = false;
 
 }
-void Turn(char turningDirection){
+void Turn(){
    while(!(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
    {
      readLineTrackers();
@@ -777,20 +783,12 @@ void Turn(char turningDirection){
    readLineTrackers();
    
    //continue until only one of the lines are tracked
-   while(!(((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance)))||
-   (!(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance)))||
-   (!(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance)))))
+   while(!(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
    {
      Serial.println("ENTERING LOOP: FOUND LINE");
      readLineTrackers();
-     if(turningDirection = 'R'){
-       servo_LeftMotor.writeMicroseconds(1300);
-       servo_RightMotor.writeMicroseconds(1700);
-     }
-     else if(turningDirection == 'L'){
-       servo_LeftMotor.writeMicroseconds(1600);
-       servo_RightMotor.writeMicroseconds(1400);
-     }
+     servo_LeftMotor.writeMicroseconds(1300);
+     servo_RightMotor.writeMicroseconds(1700);
    }
    turning = false;
 }
