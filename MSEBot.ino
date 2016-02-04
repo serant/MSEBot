@@ -2,14 +2,15 @@
 
  MSE 2202 MSEBot base code for Labs 3 and 4
  Language: Arduino
- Authors: Michael Naish and Eugen Porter
- Date: 16/01/17
+ Authors: Matthew Lawrence, Michael Naish, Eugen Porter and Seran Thirugnanam
+ Date: 02/02/2016
  
  Rev 1 - Initial version
  Rev 2 - Update for MSEduino v. 2
- 
+ Rev 3 - Completed line tracking robot 
+ Rev 4 - Completed robot which is able to pick up and drop off flags autonomously
  */
-// Matt changes 
+ 
 #include <Servo.h>
 #include <EEPROM.h>
 #include <uSTimer2.h>
@@ -36,8 +37,8 @@ I2CEncoder encoder_LeftMotor;
 //#define DEBUG_LINE_TRACKER_CALIBRATION
 //#define DEBUG_MOTOR_CALIBRATION
 //#define DEBUG_LIGHT_SENSOR
+
 boolean bt_Motors_Enabled = true;
-boolean followLineInit = false;
 unsigned int leftSpeed;
 unsigned int rightSpeed;
 unsigned int lastTurn;
@@ -48,7 +49,6 @@ unsigned long interval = 500;
 int stopCounter = 1;
 boolean finalFlag = false;
 bool flag1 = true;
-bool flag2 = false;
 
 //port pin constants
 const int ci_Ultrasonic_Ping = 2;   //input plug
@@ -307,52 +307,18 @@ void loop()
          Add line tracking code here. 
          Adjust motor speed according to information from line tracking sensors and 
          possibly encoder counts.
-         
-         DESCRIPTION OF EVERYTHING KIND OF
-         
-         when you first enter the line tracking, there are three conditionals: if all three sensors are light, line tracking if the robot isn't in the middle of turn/retrieve/place, line tracking
-           if it is in the middle of something
-           
-         POINT A
-         this loop occurs if all three sensors are on the line (i.e. if at a stop point)
-         the turning varaible is essentially what switches it from a mode that involves tracking the line (POINT B) and the mode where it does retrieval/turning stuff (POINT C)
-         the stopCounter variable is used to determine what stage it's at; case 1 (stopCounter = 1) is when it's the first time it hits the first stop point
-         case 2 (stopCounter = 2) is when the robot finds the line that leads to the box. This is when it sends the robot through the Search(); function
-         case 3 will be the journey to the dropoff point..... but the search function isn't working yet
-         
-         POINT B: this is the normal line tracking stuff from lab 3. So essentially when turning == false, it will go to these statements, meaning that it's just regular line tracking going on atm
-         POINT C: this is essentially things that work in conjunction to POINT A when the sensors are not all on the stop point but the robot is in the middle of something. The reason the turn wasn't
-         working well before was because the robot would lose track of what to do once one of the sensors move off the yellow because then it goes to the general line tracking stuff. So the idea here is 
-         to split the line tracking code in POINT B from the stuff in POINT C. Now when the robot turns to face the box, it still knows to keep turning when the sensors go off of the yellow tape
-         There's a really life if statement in POINT C that tells the robot to go back to tracking the line when the middle sensor finds the line and the box is within a certain distance. This is what
-         lets the robot run on any track since it will only continue when it find a line that is near the box
-         
-         What the next step is:
-         
-         The Search() function at the bottom doesn't work yet. Essentially all it needs to do is make the robot look left and right until the light value for the LED sensor is less than 140 (indicating
-         the flag is in sight). If you look at my code right now in the search function, i multiple a variable by -1. So if you go through the algorithm slowly you'll see that it flips the speed
-         every time the loop is run.
-         
-         So essentially:
-         
-         the robot is going to turn right and look for the LED flag until the ultra sonic sensor notices that there is more than 4cm of distance away from it (indicating that it's turned passed the box)
-         once this happens, it'll run through the code in the if statement which flips the speed and the robot will start going the other way
-         
-         the problem is that when it flips the speeds, the robot doesn't have a chance to move before the loop runs again and the ultra sonic sensor notices that the box is still out of view, so it 
-         flips the speeds again -> this literally just keeps happening forever and ever and it looks like a seizure
-         
-         so if we can figure a way to get it so that it gives the robot a chance to correct its mistake before reanalyzing the distance from the box again, it should work!
        /*************************************************************************************/
                 
-        //POINT A
-        if ((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))){
+        //If all three line trackers are on the line (i.e. on stop pads)
+        if ((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && 
+        (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))){
          if(!foundFlag){
-           turning = true;
+           turning = true;//flips boolean value to stop line tracking
          }
            
-         finalFlag = true;
+         finalFlag = true;//stops line tracking from taking over
          switch(stopCounter){
-           case 1:
+           case 1: //when the robot reaches the first stop pad
            {
              //robot spins
              leftSpeed = 1700;//makes left wheel go forward
@@ -360,17 +326,15 @@ void loop()
              break;
            }
            
-           case 2:
+           case 2://when the robot reaches the box; begins to search for and grab the flag
            {
-             Grab();
-             //servo_ArmMotor.write(ci_Arm_Servo_Search);
-             //servo_GripMotor.write(ci_Grip_Motor_Open);
+             Grab();//calls the Search(); function then picks up the flag and calls Turn(); to turn back to the line
              break;
            }
            
-           case 3:
+           case 3://when the last stop pad (before turning to drop off the flag) is reached
            {
-             FinalTurn();
+             FinalTurn();//orients robot in correct direction to line up with the dropoff point
            }
          }
         }
@@ -422,14 +386,15 @@ void loop()
             lastTurn= 0;
             
           }
-          
+          //if all sensors are dark (this happens when the robot goes to drop off the flag)
           else if(!((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))) && foundFlag && finalFlag){
             bt_Motors_Enabled = true;
+            //robot moves straight
             leftSpeed = ui_Left_Motor_Speed = 1650;
             rightSpeed = ui_Right_Motor_Speed = 1650;
             lastTurn = 0;
-            if(((ul_Echo_Time / 58) < 4) && ((ul_Echo_Time/58) != 0)){
-              Release();
+            if(((ul_Echo_Time / 58) < 4) && ((ul_Echo_Time/58) != 0)){//ensures the robot is close enough to the box before dropping off the flag
+              Release();//places the flag on the box
             }
           }
         }
@@ -437,11 +402,14 @@ void loop()
         
         //POINT C
         else{
-          if((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Data - ui_Line_Tracker_Tolerance)) && ((ul_Echo_Time/58)<20)&& (stopCounter == 1) && !foundFlag){
+          //used if the robot is turning for the first time to find the flag - faces the box regardless of which track it's on since logic is 'if middle sensor is the only one on and distance ahead is <20cm
+          if((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) 
+          && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Data - ui_Line_Tracker_Tolerance)) && ((ul_Echo_Time/58)<20)&& (stopCounter == 1) && !foundFlag){
             turning = false;
             stopCounter = 2;
           }
-          else if(foundFlag && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Data - ui_Line_Tracker_Tolerance))){
+          else if(foundFlag && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+          && !(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Data - ui_Line_Tracker_Tolerance))){
             turning = false;
             stopCounter = 4;
           }
@@ -450,9 +418,12 @@ void loop()
                 
         if(bt_Motors_Enabled)
         {
+          //moves the servo to the motor speed every cycle
           servo_LeftMotor.writeMicroseconds(leftSpeed);
           servo_RightMotor.writeMicroseconds(rightSpeed);
         }
+        
+        //stops the robot if it ends up in unknown boundaries
         else
         {  
           servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop); 
@@ -717,17 +688,15 @@ void Ping()
 #endif
 } 
 void Grab(){
-  //Serial.print("Ultrasonic");
-  //Serial.print(ul_Echo_Time/58);
-  if ((ul_Echo_Time/58)  > 5 || ((ul_Echo_Time/58) == 0)){
+  if ((ul_Echo_Time/58)  > 5 || ((ul_Echo_Time/58) == 0)){//if the box is more than 5cm away
     Serial.print("Ultrasonic");
-    Serial.println(ul_Echo_Time/58);
-    leftSpeed = 1600;
+    Serial.println(ul_Echo_Time/58);//prints the distance to serial 9600
+    leftSpeed = 1600;//moves forwards slowly
     rightSpeed = 1600;
     servo_LeftMotor.writeMicroseconds(leftSpeed); 
     servo_RightMotor.writeMicroseconds(rightSpeed);
   } else {
-    
+    //when the robot is close enough, the search function is run and the robot gets into search position
     servo_ArmMotor.write(ci_Arm_Servo_Search);
     servo_GripMotor.write(ci_Grip_Motor_Open);
     Search();
@@ -736,11 +705,11 @@ void Grab(){
 void Search()
 {
   unsigned temp;
-  leftSpeed = 1400;
+  leftSpeed = 1400;//starts scanning left
   rightSpeed = 1600;
-  previousTime = millis();
-  while(analogRead(ci_Light_Sensor) > 160){
-    currentTime = millis();
+  previousTime = millis();//updates previous time 
+  while(analogRead(ci_Light_Sensor) > 160){//every 2 seconds, the robot changes scanning direction
+    currentTime = millis();//updates the timer
     servo_LeftMotor.writeMicroseconds(leftSpeed);
     servo_RightMotor.writeMicroseconds(rightSpeed);
     if((currentTime - previousTime) >= interval){
@@ -751,14 +720,22 @@ void Search()
       previousTime = millis();
     }
   }
+  
+  //if the light/flag is found, the robot stops scanning and proceeds to pick the flag up
   leftSpeed = ci_Left_Motor_Stop;
   rightSpeed = ci_Right_Motor_Stop;
   servo_LeftMotor.writeMicroseconds(leftSpeed); 
   servo_RightMotor.writeMicroseconds(rightSpeed);
+  
+  //extends arm, waits 2 seconds
   servo_ArmMotor.write(ci_Arm_Servo_Extended);
   delay(2000);
+  
+  //grips flag, waits 1 second
   servo_GripMotor.write(ci_Grip_Motor_Closed);
   delay(1000);
+  
+  //slowly retracts arm with flag and waits for one second
   for(int i = 120; i >= 55; i-=5){
     servo_ArmMotor.write(i);
     delay(100);
@@ -766,17 +743,21 @@ void Search()
   delay(1000);
   foundFlag = true;
   stopCounter++;
-  Turn();
+  Turn();//turns the robot to face the next line to the dropoff point
   finalFlag = false;
 
 }
 void Turn(){
+  
+  //moves the robot back enough so that it's back on the pad
    while(!(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
    {
      readLineTrackers();
      servo_LeftMotor.writeMicroseconds(1400);
      servo_RightMotor.writeMicroseconds(1400);
    }
+   
+   //rotates the robot
    servo_LeftMotor.write(servo_LeftMotor.read()-10);
    servo_RightMotor.write(servo_RightMotor.read()+10);
    delay(1300);
@@ -797,7 +778,7 @@ void FinalTurn(){
    servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
    servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
    delay(200);
-   servo_LeftMotor.write(servo_LeftMotor.read()+10);
+   servo_LeftMotor.write(servo_LeftMotor.read()+10);//rotates the robot
    servo_RightMotor.write(servo_RightMotor.read()-10);
    delay(1200);
    readLineTrackers();
@@ -814,7 +795,7 @@ void FinalTurn(){
   }
   servo_ArmMotor.write(ci_Arm_Servo_Search);
 }
-void Release(){
+void Release(){//extends the arm and releases the flag, then return back to mode 0
     servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop); 
     servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
     delay(500);
