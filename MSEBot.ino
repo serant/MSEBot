@@ -25,6 +25,7 @@ Servo servo_GripMotor;
 I2CEncoder encoder_RightMotor;
 I2CEncoder encoder_LeftMotor;
 
+
 // Uncomment keywords to enable debugging output
 
 //define DEBUG_MODE_DISPLAY
@@ -34,13 +35,20 @@ I2CEncoder encoder_LeftMotor;
 //#define DEBUG_ULTRASONIC
 //#define DEBUG_LINE_TRACKER_CALIBRATION
 //#define DEBUG_MOTOR_CALIBRATION
-
+//#define DEBUG_LIGHT_SENSOR
 boolean bt_Motors_Enabled = true;
 boolean followLineInit = false;
 unsigned int leftSpeed;
 unsigned int rightSpeed;
 unsigned int lastTurn;
-unsigned int stopcounter = 0;
+unsigned long currentTime;
+unsigned long previousTime;
+unsigned long interval = 500;
+
+int stopCounter = 1;
+boolean finalFlag = false;
+bool flag1 = true;
+bool flag2 = false;
 
 //port pin constants
 const int ci_Ultrasonic_Ping = 2;   //input plug
@@ -93,8 +101,9 @@ const int ci_Left_Motor_Stop = 1500;        // 200 for brake mode; 1500 for stop
 const int ci_Right_Motor_Stop = 1500;
 const int ci_Grip_Motor_Open = 170;         // Experiment to determine appropriate value
 const int ci_Grip_Motor_Closed = 90;        //  "
-const int ci_Arm_Servo_Retracted = 60;      //  "
+const int ci_Arm_Servo_Retracted = 55;      //  "
 const int ci_Arm_Servo_Extended = 120;      //  "
+const int ci_Arm_Servo_Search = 90;
 const int ci_Display_Time = 500;
 const int ci_Line_Tracker_Calibration_Interval = 100;
 const int ci_Line_Tracker_Cal_Measures = 20;
@@ -130,6 +139,7 @@ unsigned int ui_Middle_Line_Tracker_Light;
 unsigned int ui_Right_Line_Tracker_Dark;
 unsigned int ui_Right_Line_Tracker_Light;
 unsigned int ui_Line_Tracker_Tolerance;
+unsigned int switchDirection= 50;
 
 unsigned int  ui_Robot_State_Index = 0;
 //0123456789ABCDEF
@@ -153,6 +163,9 @@ boolean bt_Heartbeat = true;
 boolean bt_3_S_Time_Up = false;
 boolean bt_Do_Once = false;
 boolean bt_Cal_Initialized = false;
+boolean beginRightTurn = true;//when this value is true, the robot will search right
+boolean foundFlag = false; //when this value is true, it means the flag has been found by the robot
+boolean turning = false; //true when robot is making a 90 degree turn for example
 
 void setup() {
   Wire.begin();        // Wire library required for I2CEncoder library
@@ -277,6 +290,7 @@ void loop()
       if(bt_3_S_Time_Up)
       {
         readLineTrackers();
+        Ping();
         
 
 #ifdef DEBUG_ENCODERS           
@@ -293,92 +307,146 @@ void loop()
          Add line tracking code here. 
          Adjust motor speed according to information from line tracking sensors and 
          possibly encoder counts.
+         
+         DESCRIPTION OF EVERYTHING KIND OF
+         
+         when you first enter the line tracking, there are three conditionals: if all three sensors are light, line tracking if the robot isn't in the middle of turn/retrieve/place, line tracking
+           if it is in the middle of something
+           
+         POINT A
+         this loop occurs if all three sensors are on the line (i.e. if at a stop point)
+         the turning varaible is essentially what switches it from a mode that involves tracking the line (POINT B) and the mode where it does retrieval/turning stuff (POINT C)
+         the stopCounter variable is used to determine what stage it's at; case 1 (stopCounter = 1) is when it's the first time it hits the first stop point
+         case 2 (stopCounter = 2) is when the robot finds the line that leads to the box. This is when it sends the robot through the Search(); function
+         case 3 will be the journey to the dropoff point..... but the search function isn't working yet
+         
+         POINT B: this is the normal line tracking stuff from lab 3. So essentially when turning == false, it will go to these statements, meaning that it's just regular line tracking going on atm
+         POINT C: this is essentially things that work in conjunction to POINT A when the sensors are not all on the stop point but the robot is in the middle of something. The reason the turn wasn't
+         working well before was because the robot would lose track of what to do once one of the sensors move off the yellow because then it goes to the general line tracking stuff. So the idea here is 
+         to split the line tracking code in POINT B from the stuff in POINT C. Now when the robot turns to face the box, it still knows to keep turning when the sensors go off of the yellow tape
+         There's a really life if statement in POINT C that tells the robot to go back to tracking the line when the middle sensor finds the line and the box is within a certain distance. This is what
+         lets the robot run on any track since it will only continue when it find a line that is near the box
+         
+         What the next step is:
+         
+         The Search() function at the bottom doesn't work yet. Essentially all it needs to do is make the robot look left and right until the light value for the LED sensor is less than 140 (indicating
+         the flag is in sight). If you look at my code right now in the search function, i multiple a variable by -1. So if you go through the algorithm slowly you'll see that it flips the speed
+         every time the loop is run.
+         
+         So essentially:
+         
+         the robot is going to turn right and look for the LED flag until the ultra sonic sensor notices that there is more than 4cm of distance away from it (indicating that it's turned passed the box)
+         once this happens, it'll run through the code in the if statement which flips the speed and the robot will start going the other way
+         
+         the problem is that when it flips the speeds, the robot doesn't have a chance to move before the loop runs again and the ultra sonic sensor notices that the box is still out of view, so it 
+         flips the speeds again -> this literally just keeps happening forever and ever and it looks like a seizure
+         
+         so if we can figure a way to get it so that it gives the robot a chance to correct its mistake before reanalyzing the distance from the box again, it should work!
        /*************************************************************************************/
-          
-        if(followLineInit == false){
-          leftSpeed = ui_Left_Motor_Speed = constrain(ui_Motors_Speed + ui_Left_Motor_Offset, 1400, 2100);
-          rightSpeed = ui_Right_Motor_Speed = constrain(ui_Motors_Speed + ui_Right_Motor_Offset, 1400, 2100);
-          followLineInit = true; 
+                
+        //POINT A
+        if ((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))){
+         if(!foundFlag){
+           turning = true;
+         }
+           
+         finalFlag = true;
+         switch(stopCounter){
+           case 1:
+           {
+             //robot spins
+             leftSpeed = 1700;//makes left wheel go forward
+             rightSpeed = 1300;//makes right wheel go backwards
+             break;
+           }
+           
+           case 2:
+           {
+             Grab();
+             //servo_ArmMotor.write(ci_Arm_Servo_Search);
+             //servo_GripMotor.write(ci_Grip_Motor_Open);
+             break;
+           }
+           
+           case 3:
+           {
+             FinalTurn();
+           }
+         }
         }
-        else if ((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))){
-          //STOP
-          {
-            bt_Motors_Enabled = false;
-            servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
-            servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
-            ui_Robot_State_Index = 0;
-
-          }
-            
-          /*if (stopcounter == 1){
-            
-            ui_Left_Motor_Speed = 1450;
-            ui_Right_Motor_Speed = 1550;
-            servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed); 
-            servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-            
-            if (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) {
-               servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop); 
-               servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
-               break;
-              }
-            }*/
-          //ui_Robot_State_Index = 0;
-        }
-        else if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance) && ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)){
+        
+        //POINT B
+        if(!turning){
+          if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance) && ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)){
           // Move Right a little bit
           bt_Motors_Enabled = true;
-          leftSpeed = ui_Left_Motor_Speed = 1615;
+          leftSpeed = ui_Left_Motor_Speed = 1650;
           rightSpeed = ui_Right_Motor_Speed = 1600;
           lastTurn = 1;
-        }
-        else if(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance) && ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)){
-          // Move left a little bit
-          bt_Motors_Enabled = true;
-          leftSpeed = ui_Left_Motor_Speed = 1600;
-          rightSpeed = ui_Right_Motor_Speed = 1615;
-          lastTurn = 0;
-        }
-      
-        else if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
-        {
-          // Move right a lot
-          bt_Motors_Enabled = true;
-          leftSpeed = ui_Left_Motor_Speed = 1605;
-          rightSpeed = ui_Right_Motor_Speed = 1505;
-          lastTurn = 1;
-        }
-
-        else if(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
-        {
-          // Stay stright 
-          bt_Motors_Enabled = true;
-          leftSpeed = ui_Left_Motor_Speed = 1650;
-          rightSpeed = ui_Right_Motor_Speed = 1650;    
-        }
           
-        else if(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
-        {
-          // Move left a lot
-          bt_Motors_Enabled = true;
-          leftSpeed = ui_Left_Motor_Speed = 1505;
-          rightSpeed = ui_Right_Motor_Speed = 1605;
-          lastTurn= 0;
-        } 
-        else {
-          // If robot get totally off track, all three sensors are black
-          if ( lastTurn == 1){
-            bt_Motors_Enabled = true;
-            leftSpeed = ui_Left_Motor_Speed = 1501;
-            rightSpeed = ui_Right_Motor_Speed = 1701;
-          } else {
-            bt_Motors_Enabled = true;
-            leftSpeed = ui_Left_Motor_Speed = 1701;
-            rightSpeed = ui_Right_Motor_Speed = 1501;
           }
-         }
+          else if(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance) && ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)){
+            // Move left a little bit
+            bt_Motors_Enabled = true;
+            leftSpeed = ui_Left_Motor_Speed = 1600;
+            rightSpeed = ui_Right_Motor_Speed = 1650;
+            lastTurn = 0;
+            
+          }
+        
+          else if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+          {
+            // Move right a lot
+            bt_Motors_Enabled = true;
+            leftSpeed = ui_Left_Motor_Speed = 1650;
+            rightSpeed = ui_Right_Motor_Speed = 1505;
+            lastTurn = 1;
+            
+          }
+  
+          else if(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+          {
+            // Stay stright 
+            bt_Motors_Enabled = true;
+            leftSpeed = ui_Left_Motor_Speed = 1700;
+            rightSpeed = ui_Right_Motor_Speed = 1700;
+            flag1 = true;    
+          }
+            
+          else if(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+          {
+            // Move left a lot
+            bt_Motors_Enabled = true;
+            leftSpeed = ui_Left_Motor_Speed = 1505;
+            rightSpeed = ui_Right_Motor_Speed = 1650;
+            lastTurn= 0;
+            
+          }
+          
+          else if(!((ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))  && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance))) && foundFlag && finalFlag){
+            bt_Motors_Enabled = true;
+            leftSpeed = ui_Left_Motor_Speed = 1650;
+            rightSpeed = ui_Right_Motor_Speed = 1650;
+            lastTurn = 0;
+            if(((ul_Echo_Time / 58) < 4) && ((ul_Echo_Time/58) != 0)){
+              Release();
+            }
+          }
+        }
         
         
+        //POINT C
+        else{
+          if((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Data - ui_Line_Tracker_Tolerance)) && ((ul_Echo_Time/58)<20)&& (stopCounter == 1) && !foundFlag){
+            turning = false;
+            stopCounter = 2;
+          }
+          else if(foundFlag && (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && !(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Data - ui_Line_Tracker_Tolerance))){
+            turning = false;
+            stopCounter = 4;
+          }
+        }
+        //END OF POINT C
                 
         if(bt_Motors_Enabled)
         {
@@ -555,20 +623,7 @@ void loop()
         ui_Mode_Indicator_Index = 4;
       } 
       break;
-      
-      case 5:
-      {
-        Ping();
-        if((ul_Echo_Time/58) <= 5){
-          servo_ArmMotor.write(ci_Arm_Servo_Extended);
-          servo_GripMotor.write(ci_Grip_Motor_Open);
-        }
-        unsigned int lightSensorValue = analogRead(ci_Light_Sensor);
-        Serial.println(lightSensorValue);
-
-        break;
-      }
-    }    
+    }   
   }
 
   if((millis() - ul_Display_Time) > ci_Display_Time)
@@ -661,8 +716,116 @@ void Ping()
   Serial.println(ul_Echo_Time/58); //divide time by 58 to get distance in cm 
 #endif
 } 
+void Grab(){
+  //Serial.print("Ultrasonic");
+  //Serial.print(ul_Echo_Time/58);
+  if ((ul_Echo_Time/58)  > 5 || ((ul_Echo_Time/58) == 0)){
+    Serial.print("Ultrasonic");
+    Serial.println(ul_Echo_Time/58);
+    leftSpeed = 1600;
+    rightSpeed = 1600;
+    servo_LeftMotor.writeMicroseconds(leftSpeed); 
+    servo_RightMotor.writeMicroseconds(rightSpeed);
+  } else {
+    
+    servo_ArmMotor.write(ci_Arm_Servo_Search);
+    servo_GripMotor.write(ci_Grip_Motor_Open);
+    Search();
+  }
+}    
+void Search()
+{
+  unsigned temp;
+  leftSpeed = 1400;
+  rightSpeed = 1600;
+  previousTime = millis();
+  while(analogRead(ci_Light_Sensor) > 160){
+    currentTime = millis();
+    servo_LeftMotor.writeMicroseconds(leftSpeed);
+    servo_RightMotor.writeMicroseconds(rightSpeed);
+    if((currentTime - previousTime) >= interval){
+      temp = leftSpeed;
+      interval = 1000;
+      leftSpeed = rightSpeed;
+      rightSpeed = temp;
+      previousTime = millis();
+    }
+  }
+  leftSpeed = ci_Left_Motor_Stop;
+  rightSpeed = ci_Right_Motor_Stop;
+  servo_LeftMotor.writeMicroseconds(leftSpeed); 
+  servo_RightMotor.writeMicroseconds(rightSpeed);
+  servo_ArmMotor.write(ci_Arm_Servo_Extended);
+  delay(2000);
+  servo_GripMotor.write(ci_Grip_Motor_Closed);
+  delay(1000);
+  for(int i = 120; i >= 55; i-=5){
+    servo_ArmMotor.write(i);
+    delay(100);
+  }
+  delay(1000);
+  foundFlag = true;
+  stopCounter++;
+  Turn();
+  finalFlag = false;
 
+}
+void Turn(){
+   while(!(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
+   {
+     readLineTrackers();
+     servo_LeftMotor.writeMicroseconds(1400);
+     servo_RightMotor.writeMicroseconds(1400);
+   }
+   servo_LeftMotor.write(servo_LeftMotor.read()-10);
+   servo_RightMotor.write(servo_RightMotor.read()+10);
+   delay(1300);
+   readLineTrackers();
+   
+   //continue until only one of the lines are tracked
+   while(!(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
+   {
+     Serial.println("ENTERING LOOP: FOUND LINE");
+     readLineTrackers();
+     servo_LeftMotor.writeMicroseconds(1300);
+     servo_RightMotor.writeMicroseconds(1700);
+   }
+   turning = false;
+}
 
-
-
+void FinalTurn(){
+   servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+   servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+   delay(200);
+   servo_LeftMotor.write(servo_LeftMotor.read()+10);
+   servo_RightMotor.write(servo_RightMotor.read()-10);
+   delay(1200);
+   readLineTrackers();
+   
+   
+   //continue until only one of the lines are tracked
+   while(!(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark- ui_Line_Tracker_Tolerance)))
+  {
+     Serial.println("ENTERING LOOP: FOUND LINE");
+     readLineTrackers();
+     servo_LeftMotor.writeMicroseconds(1600);
+     servo_RightMotor.writeMicroseconds(1400);
+     turning = false;
+  }
+  servo_ArmMotor.write(ci_Arm_Servo_Search);
+}
+void Release(){
+    servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop); 
+    servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+    delay(500);
+    servo_ArmMotor.write(ci_Arm_Servo_Extended);
+    delay (1000);
+    servo_GripMotor.write(ci_Grip_Motor_Open);
+    delay (2000);
+    servo_ArmMotor.write(ci_Arm_Servo_Retracted);
+    delay(1000);
+    servo_ArmMotor.write(ci_Grip_Motor_Closed);
+    delay(1000);
+    ui_Robot_State_Index = 0;
+  }
 
