@@ -31,7 +31,7 @@ I2CEncoder encoder_LeftMotor;
 
 //define DEBUG_MODE_DISPLAY
 //#define DEBUG_MOTORS
-//#define DEBUG_LINE_TRACKERS
+#define DEBUG_LINE_TRACKERS
 //#define DEBUG_ENCODERS
 //#define DEBUG_ULTRASONIC
 //#define DEBUG_LINE_TRACKER_CALIBRATION
@@ -474,10 +474,10 @@ void loop()
 #ifdef DEBUG_LINE_TRACKER_CALIBRATION
           Serial.print("Light Levels: Left = ");
           Serial.print(ui_Left_Line_Tracker_Light,DEC);
-          Serial.print(", Middle = ");
-          Serial.print(ui_Middle_Line_Tracker_Light,DEC);
-          Serial.print(", Right = ");
-          Serial.println(ui_Right_Line_Tracker_Light,DEC);
+          //Serial.print(", Middle = ");
+          //Serial.print(ui_Middle_Line_Tracker_Light,DEC);
+          //Serial.print(", Right = ");
+          //Serial.println(ui_Right_Line_Tracker_Light,DEC);
 #endif           
           EEPROM.write(ci_Left_Line_Tracker_Light_Address_L, lowByte(ui_Left_Line_Tracker_Light));
           EEPROM.write(ci_Left_Line_Tracker_Light_Address_H, highByte(ui_Left_Line_Tracker_Light));
